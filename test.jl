@@ -29,12 +29,12 @@ end
 function genTriangles()
     # The data for our triangle
     data = GLfloat[
-        0.0, 0.5,
-        0.5, -0.5,
-        -0.5,-0.5,
-        1.00, 1.05,
-        1.05, .95,
-        .95, .95
+        0.0, 0.5, 0, 1,
+        0.5, -0.5, 1, 1, 
+        -0.5,-0.5, 0, 0,
+        1.00, 1.05, 0, 0,
+        1.05, .95, 0, 1,
+        .95, .95, 1, 1
     ]
     # Generate a vertex array and array buffer for our data
     #vao = glGenVertexArray()
@@ -48,29 +48,39 @@ function genShader()
     # Create and initialize shaders
     vsh = """
     $(get_glsl_version_string())
-    in vec2 position;
+    in vec2 positiono;
+    in vec2 tex_coord;
     uniform vec2 mousePos;
+    out vec2 Tex_coord;
     void main() {
-        gl_Position = vec4(position + mousePos / 300 - vec2(1, 1), 0.0, 1.0);
+        gl_Position = vec4(tex_coord * 0.000001 + positiono + mousePos / 300 - vec2(1, 1), 0.0, 1.0);
+        Tex_coord = tex_coord;
     }
     """
     fsh = """
     $(get_glsl_version_string())
     in vec4 gl_FragCoord;
+    in vec2 Tex_coord;
     uniform vec2 mousePos;
+    uniform sampler2D u_Texture;
     out vec4 outColor;
     void main() {
-        outColor = (gl_FragCoord  ) / 600;
+        vec4 texColor = texture(u_Texture, Tex_coord);
+        outColor = texColor; // + (gl_FragCoord  ) / 600;
     }
     """
     vertexShader = createShader(vsh, GL_VERTEX_SHADER)
     fragmentShader = createShader(fsh, GL_FRAGMENT_SHADER)
     program = createShaderProgram(vertexShader, fragmentShader)
     glUseProgram(program)
-    positionAttribute = glGetAttribLocation(program, "position");
+    positionAttribute = glGetAttribLocation(program, "positiono");
     glEnableVertexAttribArray(positionAttribute)
-    glVertexAttribPointer(positionAttribute, 2, GL_FLOAT, false, 0, C_NULL
-                                    )
+    glVertexAttribPointer(positionAttribute, 2, GL_FLOAT, false, 16, C_NULL)
+    println(positionAttribute)
+    texCoordAttribute = glGetAttribLocation(program, "tex_coord");
+    println(texCoordAttribute)
+    glEnableVertexAttribArray(texCoordAttribute)
+    glVertexAttribPointer(texCoordAttribute, 2, GL_FLOAT, false, 16, C_NULL + 8)
     return program
 end
 
@@ -89,20 +99,28 @@ function genTexture()
     data = load("gather_art.png")[3:end, :]
     data = reinterpret.(channelview(data)[:])
 
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP)
 
-    #glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
-    #glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
-    #glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP)
-    #glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP)
-
-
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 512, 512, 0, GL_RGBA, GL_UNSIGNED_BYTE, pointer(data)) 
     
     return Texture(textureID, data, 512, 512, 32)
+end
+
+function bind(t::Texture)
+    glActiveTexture(GL_TEXTURE1)
+    glBindTexture(GL_TEXTURE_2D, t.id)
 end
 window = initWindow()
 mesh = genTriangles()
 program = genShader()
-#texture = genTexture()
+texture = genTexture()
+
+texture_uniform_slot = glGetUniformLocation(program, "u_Texture")
+glUniform1i(texture_uniform_slot, 0)
+
 # Loop until the user closes the window
 mousePos = glGetUniformLocation(program, "mousePos")
 function cursorCallback(_, x, y)
@@ -126,9 +144,10 @@ function main()
             elapsed = time() - start
         end
         theta = elapsed 
-        data_rotated = [cos(theta) sin(theta); -sin(theta) cos(theta)] * reshape(mesh.data, 2, 6)
-        data_rotated_flat = GLfloat.(reshape(data_rotated, 12))
-        glBufferData(GL_ARRAY_BUFFER, sizeof(data), data_rotated_flat, GL_DYNAMIC_DRAW)
+        #data_rotated = [cos(theta) sin(theta); -sin(theta) cos(theta)] * reshape(mesh.data, 4, 6)[1:2, :]
+        #data_rotated =                            
+        #data_rotated_flat = GLfloat.(reshape(data_rotated, 12))
+        glBufferData(GL_ARRAY_BUFFER, sizeof(mesh.data), mesh.data, GL_DYNAMIC_DRAW)
         # Pulse the background blue
         glClearColor(0.0, 0.0, 0, 1.0)
         glClear(GL_COLOR_BUFFER_BIT)

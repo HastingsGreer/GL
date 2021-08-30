@@ -2,14 +2,14 @@ function load_texture(path::AbstractString)
     x, y, n = Cint(0), Cint(0), Cint(0)
     force_channels = 4
     stbi_set_flip_vertically_on_load(true)
-    tex_data = @c stbi_load(path, &x, &y, &n, force_channels)
+    #tex_data = @c stbi_load(path, &x, &y, &n, force_channels)
     if tex_data == C_NULL
-        @error "could not load $path."
+    #    @error "could not load $path."
         return nothing
     end
     ( ( x & ( x - 1 ) ) != 0 || ( y & ( y - 1 ) ) != 0 ) && @warn "texture $path is not power-of-2 dimensions."
     id = GLuint(0)
-    @c glGenTextures(1, &id)
+    #@c glGenTextures(1, &id)
     glActiveTexture(GL_TEXTURE0)
     glBindTexture(GL_TEXTURE_2D, id)
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, x, y, 0, GL_RGBA, GL_UNSIGNED_BYTE, tex_data)
