@@ -7,7 +7,7 @@ function initWindow()
 
     GLFW.Init()
     # OS X-specific GLFW hints to initialize the correct version of OpenGL
-    wh = 600
+    wh = 1400
     # Create a windowed mode window and its OpenGL context
     window = GLFW.CreateWindow(wh, wh, "OpenGL Example")
     # Make the window's context current
@@ -53,7 +53,7 @@ function genShader()
     uniform vec2 mousePos;
     out vec2 Tex_coord;
     void main() {
-        gl_Position = vec4(tex_coord * 0.000001 + positiono + mousePos / 300 - vec2(1, 1), 0.0, 1.0);
+        gl_Position = vec4(tex_coord * 0.000001 + positiono + mousePos / 700 - vec2(1, 1), 0.0, 1.0);
         Tex_coord = tex_coord;
     }
     """
@@ -66,7 +66,7 @@ function genShader()
     out vec4 outColor;
     void main() {
         vec4 texColor = texture(u_Texture, Tex_coord);
-        outColor = texColor; // + (gl_FragCoord  ) / 600;
+        outColor = texColor + (gl_FragCoord  ) / 1400;
     }
     """
     vertexShader = createShader(vsh, GL_VERTEX_SHADER)
@@ -124,8 +124,8 @@ glUniform1i(texture_uniform_slot, 0)
 # Loop until the user closes the window
 mousePos = glGetUniformLocation(program, "mousePos")
 function cursorCallback(_, x, y)
-    glUniform2f(mousePos, x, 600 - y)
-    # GLFW.SetCursorPos(window, 300, 300)
+    glUniform2f(mousePos, x, 1400 - y)
+    # GLFW.SetCursorPos(window, 700, 700)
 end
 
 
